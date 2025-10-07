@@ -225,3 +225,21 @@ class TestOperationFactory:
 
         with pytest.raises(TypeError, match="Operation class must inherit"):
             OperationFactory.register_operation("invalid", InvalidOperation)
+
+import pytest
+from decimal import Decimal
+from app.operations import OperationFactory
+from app.exceptions import ValidationError
+
+def test_modulus_basic():
+    op = OperationFactory.create_operation('mod')
+    assert op.execute(Decimal('10'), Decimal('3')) == Decimal('1')
+
+def test_modulus_alias():
+    op = OperationFactory.create_operation('modulus')
+    assert op.execute(Decimal('10'), Decimal('4')) == Decimal('2')
+
+def test_modulus_zero_divisor():
+    op = OperationFactory.create_operation('mod')
+    with pytest.raises(ValidationError):
+        op.execute(Decimal('5'), Decimal('0'))

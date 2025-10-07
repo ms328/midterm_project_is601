@@ -44,6 +44,7 @@ def calculator_repl():
                     print("  save - Save calculation history to file")
                     print("  load - Load calculation history from file")
                     print("  exit - Exit the calculator")
+                    print("  mod, modulus - Remainder of first number divided by the second")
                     continue
 
                 if command == 'exit':
@@ -106,9 +107,8 @@ def calculator_repl():
                     except Exception as e:
                         print(f"Error loading history: {e}")
                     continue
-
-                if command in ['add', 'subtract', 'multiply', 'divide', 'power', 'root']:
-                    # Perform the specified arithmetic operation
+                if command in ['add', 'subtract', 'multiply', 'divide', 'power', 'root', 'mod', 'modulus']:
+                    # Perform the specified arithmetic operation (including mod/modulus)
                     try:
                         print("\nEnter numbers (or 'cancel' to abort):")
                         a = input("First number: ")

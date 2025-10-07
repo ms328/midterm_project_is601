@@ -11,7 +11,17 @@ from app.calculator_config import CalculatorConfig
 from app.exceptions import OperationError, ValidationError
 from app.history import LoggingObserver, AutoSaveObserver
 from app.operations import OperationFactory
-
+import io
+import os
+import pandas as pd
+import pytest
+from decimal import Decimal
+from pathlib import Path
+from app.calculator import Calculator
+from app.calculator_config import CalculatorConfig
+from app.history import HistoryObserver
+from app.operations import OperationFactory
+from app.exceptions import OperationError, ValidationError
 # Fixture to initialize Calculator with a temporary directory for file paths
 @pytest.fixture
 def calculator():
@@ -178,3 +188,26 @@ def test_calculator_repl_help(mock_print, mock_input):
 def test_calculator_repl_addition(mock_print, mock_input):
     calculator_repl()
     mock_print.assert_any_call("\nResult: 5")
+import pytest
+from decimal import Decimal
+from app.calculation import Calculation
+from app.exceptions import OperationError
+
+def test_calculation_unknown_operation_raises():
+    with pytest.raises(OperationError):
+        Calculation(operation="NotARealOp", operand1=Decimal('1'), operand2=Decimal('2'))
+
+def test_calculation_repr_and_eq():
+    c1 = Calculation(operation="Addition", operand1=Decimal('1'), operand2=Decimal('2'))
+    c2 = Calculation(operation="Addition", operand1=Decimal('1'), operand2=Decimal('2'))
+    c3 = Calculation(operation="Addition", operand1=Decimal('2'), operand2=Decimal('2'))
+    assert c1 == c2
+    assert (c1 == c3) is False
+    # cover __repr__ (string content isn’t important; just call it)
+    r = repr(c1)
+    assert "Calculation(" in r and "operation='Addition'" in r
+
+def test_calculation_format_result_default_precision():
+    c = Calculation(operation="Division", operand1=Decimal('1'), operand2=Decimal('3'))
+    s = c.format_result()  # default precision path
+    assert isinstance(s, str) and s  # just ensure it returns a string

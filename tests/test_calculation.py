@@ -130,3 +130,19 @@ def test_from_dict_result_mismatch(caplog):
 
     # Assert
     assert "Loaded calculation result 10 differs from computed result 5" in caplog.text
+import pytest
+from decimal import Decimal
+from app.calculation import Calculation
+from app.exceptions import OperationError
+
+def test_unknown_operation_raises():
+    with pytest.raises(OperationError):
+        Calculation(operation="FakeOp", operand1=Decimal(1), operand2=Decimal(2))
+
+def test_repr_and_eq_and_format_result():
+    c1 = Calculation(operation="Addition", operand1=Decimal(1), operand2=Decimal(2))
+    _ = repr(c1)   # cover __repr__
+    c2 = Calculation(operation="Addition", operand1=Decimal(1), operand2=Decimal(2))
+    assert c1 == c2
+    # cover format_result
+    assert isinstance(c1.format_result(), str)
