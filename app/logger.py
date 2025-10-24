@@ -1,36 +1,55 @@
+########################
+# Logger Module        #
+########################
+
 import logging
-from datetime import datetime
-from pathlib import Path
+import os
 import pandas as pd
+from datetime import datetime
 from app.calculator_config import CalculatorConfig
 
+config = CalculatorConfig()
+
+# Ensure log directory exists
+os.makedirs(config.log_dir, exist_ok=True)
+
+# Configure logger to write to file and console
+LOG_FILE = config.log_file
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_FILE, mode="a"),
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
+
 class LoggingObserver:
-    """Observer that logs each calculation."""
+    """Observer that logs calculator events to a log file."""
 
-    def __init__(self):
-        self.config = CalculatorConfig()
-        Path(self.config.log_dir).mkdir(parents=True, exist_ok=True)
-        logging.basicConfig(
-            filename=self.config.log_file,
-            level=logging.INFO,
-            format="%(asctime)s [%(levelname)s]: %(message)s",
-        )
-
-    def update(self, event_type, data):
-        if event_type == "calculation_performed":
-            msg = f"{data['operation']}({data['a']}, {data['b']}) = {data['result']}"
-            logging.info(msg)
+    def update(self, event: str, data: dict):
+        if event == "calculation_performed":
+            op = data.get("operation")
+            a = data.get("a")
+            b = data.get("b")
+            result = data.get("result")
+            logger.info(f"{op}({a}, {b}) = {result}")
 
 
 class AutoSaveObserver:
-    """Observer that auto-saves calculation history to CSV."""
+    """Observer that automatically saves history to CSV."""
 
-    def __init__(self):
-        self.config = CalculatorConfig()
-        Path(self.config.history_dir).mkdir(parents=True, exist_ok=True)
-
-    def update(self, event_type, data):
-        if event_type == "calculation_performed":
-            history = data.get("history", [])
+    def update(self, event: str, data: dict):
+        if event == "calculation_performed":
+            history = data.get("history")
+            if not history:
+                return
             df = pd.DataFrame(history)
-            df.to_csv(self.config.history_file, index=False)
+            os.makedirs(config.history_dir, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"history_{timestamp}.csv"
+            file_path = os.path.join(config.history_dir, filename)
+            df.to_csv(file_path, index=False)
