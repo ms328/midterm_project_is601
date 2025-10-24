@@ -161,3 +161,9 @@ def calculator_repl():
         print(f"Fatal error: {e}")
         logging.error(f"Fatal error in calculator REPL: {e}")
         raise
+# Allow running REPL manually or in test mode
+if __name__ == "__main__":
+    import sys
+    # Only start infinite input loop if not in test mode
+    if not any(arg in sys.argv for arg in ["--test-mode", "-t"]):
+        calculator_repl()

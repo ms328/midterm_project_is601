@@ -8,27 +8,52 @@ import pandas as pd
 from datetime import datetime
 from app.calculator_config import CalculatorConfig
 
-config = CalculatorConfig()
+def setup_logger():
+    """Set up logging configuration with current environment settings."""
+    # Load configuration AFTER checking env vars (so tmp_path ones take effect)
+    config = CalculatorConfig()
 
-# Ensure log directory exists
-os.makedirs(config.log_dir, exist_ok=True)
+    # Dynamically pick up env-based log/history directories
+    log_dir = os.getenv("CALCULATOR_LOG_DIR", str(config.log_dir))
+    hist_dir = os.getenv("CALCULATOR_HISTORY_DIR", str(config.history_dir))
+    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(hist_dir, exist_ok=True)
 
-# Configure logger to write to file and console
-LOG_FILE = config.log_file
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler(LOG_FILE, mode="a"),
-        logging.StreamHandler()
-    ]
-)
+    LOG_FILE = os.path.join(log_dir, "calculator.log")
 
-logger = logging.getLogger(__name__)
+    # Create logger with a unique name
+    logger = logging.getLogger("app.logger")
+    # Remove any existing handlers
+    logger.handlers.clear()
+    
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+
+    # Add file handler
+    file_handler = logging.FileHandler(LOG_FILE, mode="a")
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    # Add console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    # Prevent duplicate logs
+    logger.propagate = False
+    
+    return logger, log_dir, hist_dir
+
+# Initial setup
+logger, log_dir, hist_dir = setup_logger()
 
 
 class LoggingObserver:
-    """Observer that logs calculator events to a log file."""
+    """Observer that logs calculator events to a file and console."""
+
+    def __init__(self):
+        # Get fresh logger configuration
+        self.logger, _, _ = setup_logger()
 
     def update(self, event: str, data: dict):
         if event == "calculation_performed":
@@ -36,11 +61,16 @@ class LoggingObserver:
             a = data.get("a")
             b = data.get("b")
             result = data.get("result")
-            logger.info(f"{op}({a}, {b}) = {result}")
+            message = f"{op}({a}, {b}) = {result}"
+            self.logger.info(message)
 
 
 class AutoSaveObserver:
-    """Observer that automatically saves history to CSV."""
+    """Observer that saves history to CSV automatically."""
+
+    def __init__(self):
+        # Get fresh history directory configuration
+        _, _, self.hist_dir = setup_logger()
 
     def update(self, event: str, data: dict):
         if event == "calculation_performed":
@@ -48,8 +78,7 @@ class AutoSaveObserver:
             if not history:
                 return
             df = pd.DataFrame(history)
-            os.makedirs(config.history_dir, exist_ok=True)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"history_{timestamp}.csv"
-            file_path = os.path.join(config.history_dir, filename)
+            file_path = os.path.join(self.hist_dir, filename)
             df.to_csv(file_path, index=False)
